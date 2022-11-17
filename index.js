@@ -19,6 +19,22 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+function verifyJWT(req, res, next){
+      const authHeader = req.headers.authorization;
+      if(!authHeader){
+        return res.status(401).send({message: 'Unauthorized Access!'})
+      }
+      const token = authHeader.split(' ')[1];
+      
+      jwt.verify(token, process.env.ACCESS_TOKEN, function(error, decoded){
+        if(error){
+          return res.status(403).send({message: 'Forbidded Access!'})
+        }
+        req.decoded =decoded;
+        next();
+      });
+}
+
 async function run(){
     try{
       const appointmentOptionsCollection = client
@@ -103,8 +119,12 @@ async function run(){
         res.send(options);
       });
       //get booking by user email
-      app.get("/bookings", async (req, res) => {
+      app.get("/bookings",verifyJWT, async (req, res) => {
         const email = req.query.email;
+        const decodedEmail = req.decoded.email;
+        if(email !== decodedEmail){
+          return res.status(403).send({message: 'Forbidded Access!'})
+        }
         const query = { email: email };
         const bookings = await bookingsCollection.find(query).toArray();
         res.send(bookings);
@@ -112,6 +132,7 @@ async function run(){
       //insert data
       app.post("/bookings", async (req, res) => {
         const booking = req.body;
+        
         const query = {
           appointmentDate: booking.appointmentDate,
           email: booking.email,
@@ -119,7 +140,7 @@ async function run(){
         };
         const alreadyBooked = await bookingsCollection.find(query).toArray();
         if (alreadyBooked.length) {
-          const message = `You have already booking date on ${booking.appointmentDate}`;
+          const message = `You have already booking  on ${booking.treatment}`;
           return res.send({ acknowlaged: false, message });
         }
         const result = await bookingsCollection.insertOne(booking);
