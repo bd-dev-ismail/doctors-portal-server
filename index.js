@@ -156,6 +156,12 @@ async function run(){
           return res.send({accessToken: token})
         }
         res.status(403).send({accesToken: ''})
+      });
+      //get alluser
+      app.get('/users', async(req, res)=> {
+        const query = {};
+        const user = await usersCollection.find(query).toArray();
+        res.send(user);
       })
 
       //create user
