@@ -44,6 +44,7 @@ async function run(){
         .db("doctorsPortal")
         .collection("bookings");
       const usersCollection = client.db("doctorsPortal").collection("users");
+      const doctorsCollection = client.db("doctorsPortal").collection("doctors");
       //use agregate to multiple query colletions
       //get data
       app.get("/appointmentOptions", async (req, res) => {
@@ -118,6 +119,12 @@ async function run(){
           .toArray();
         res.send(options);
       });
+      //speciality
+      app.get('/appointmentSpeciality', async(req, res)=> {
+        const query = {};
+        const result = await appointmentOptionsCollection.find(query).project({name: 1}).toArray();
+        res.send(result);
+      })
       //get booking by user email
       app.get("/bookings",verifyJWT, async (req, res) => {
         const email = req.query.email;
@@ -193,6 +200,17 @@ async function run(){
           }
         }
         const result = await usersCollection.updateOne(filter, updatedDoc, options);
+        res.send(result);
+      });
+      //doctor 
+      app.get('/doctors', async(req, res)=> {
+        const query = {};
+        const doctors = await doctorsCollection.find(query).toArray();
+        res.send(doctors)
+      })
+      app.post('/doctors', async(req, res)=> {
+        const doctor = req.body;
+        const result = await doctorsCollection.insertOne(doctor);
         res.send(result);
       })
     }
