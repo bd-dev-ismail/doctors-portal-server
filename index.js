@@ -2,7 +2,9 @@ const express = require('express')
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require('jsonwebtoken');
+
 require('dotenv').config();
+const stripe = require("stripe")(process.env.STRIPE_KEY);
 const port = process.env.PORT || 5000;
 const app = express();
 //midlewares
@@ -45,6 +47,7 @@ async function run(){
         .collection("bookings");
       const usersCollection = client.db("doctorsPortal").collection("users");
       const doctorsCollection = client.db("doctorsPortal").collection("doctors");
+      const paymentsCollection = client.db("doctorsPortal").collection("payments");
       //use need to call frist veriJwt then call this admin verify function~!
       const verifyAdmin = async(req,res, next)=> {
         
@@ -185,6 +188,34 @@ async function run(){
         }
         res.status(403).send({accesToken: ''})
       });
+     app.post("/create-payment-intent", async (req, res) => {
+       const booking = req.body;
+       const price = booking.price;
+       const amount = price * 100;
+
+       const paymentIntent = await stripe.paymentIntents.create({
+         currency: "usd",
+         amount: amount,
+         payment_method_types: ["card"],
+       });
+       res.send({
+         clientSecret: paymentIntent.client_secret,
+       });
+     });
+     app.post('/payments', async(req, res)=> {
+      const payment  =req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId;
+      const filter = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transitionId: payment.transitionId,
+        }
+      }
+      const updatedResult = await bookingsCollection.updateOne(filter, updatedDoc);
+      res.send(result)
+     })
       //get alluser
       app.get('/users', async(req, res)=> {
         const query = {};
