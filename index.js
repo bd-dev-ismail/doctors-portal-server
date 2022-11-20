@@ -150,6 +150,12 @@ async function run(){
         const bookings = await bookingsCollection.find(query).toArray();
         res.send(bookings);
       });
+      app.get('/bookings/:id', async(req, res)=> {
+        const id = req.params.id;
+        const filter = {_id: ObjectId(id)};
+        const result = await bookingsCollection.findOne(filter);
+        res.send(result);
+      })
       //insert data
       app.post("/bookings", async (req, res) => {
         const booking = req.body;
@@ -167,6 +173,7 @@ async function run(){
         const result = await bookingsCollection.insertOne(booking);
         res.send(result);
       });
+     
       //issue jwt
       app.get('/jwt', async(req, res)=> {
         const email = req.query.email;
