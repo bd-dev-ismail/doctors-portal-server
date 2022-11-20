@@ -45,6 +45,18 @@ async function run(){
         .collection("bookings");
       const usersCollection = client.db("doctorsPortal").collection("users");
       const doctorsCollection = client.db("doctorsPortal").collection("doctors");
+      //use need to call frist veriJwt then call this admin verify function~!
+      const verifyAdmin = async(req,res, next)=> {
+        
+        const decodedEmail = req.decoded.email;
+        const query = { email: decodedEmail };
+        const user = await usersCollection.findOne(query);
+        if (user?.role !== "admin") {
+          return res.status(403).send({ message: "Forbidden Access!" });
+        }
+        
+        next();
+      }
       //use agregate to multiple query colletions
       //get data
       app.get("/appointmentOptions", async (req, res) => {
@@ -97,6 +109,7 @@ async function run(){
             {
               $project: {
                 name: 1,
+                price: 1,
                 slots: 1,
                 booked: {
                   $map: {
@@ -110,6 +123,7 @@ async function run(){
             {
               $project: {
                 name: 1,
+                price: 1,
                 slots: {
                   $setDifference: ["$slots", "$booked"],
                 },
@@ -126,7 +140,7 @@ async function run(){
         res.send(result);
       })
       //get booking by user email
-      app.get("/bookings",verifyJWT, async (req, res) => {
+      app.get("/bookings",verifyJWT, verifyAdmin, async (req, res) => {
         const email = req.query.email;
         const decodedEmail = req.decoded.email;
         if(email !== decodedEmail){
@@ -184,13 +198,8 @@ async function run(){
         res.send(result);
       });
       //make admin
-      app.put('/users/admin/:id',verifyJWT, async(req, res)=> {
-        const decodedEmail = req.decoded.email;
-        const query = {email: decodedEmail};
-        const user = await usersCollection.findOne(query);
-        if(user?.role !== 'admin'){
-          return res.status(403).send({message: 'Forbidden Access!'});
-        }
+      app.put('/users/admin/:id',verifyJWT, verifyAdmin, async(req, res)=> {
+       
         const id = req.params.id;
         const filter = {_id: ObjectId(id)};
         const options = { upsert: true };
@@ -203,16 +212,34 @@ async function run(){
         res.send(result);
       });
       //doctor 
-      app.get('/doctors', async(req, res)=> {
+      app.get('/doctors', verifyJWT, verifyAdmin, async(req, res)=> {
         const query = {};
         const doctors = await doctorsCollection.find(query).toArray();
         res.send(doctors)
       })
-      app.post('/doctors', async(req, res)=> {
+      app.post('/doctors', verifyJWT,verifyAdmin, async(req, res)=> {
         const doctor = req.body;
         const result = await doctorsCollection.insertOne(doctor);
         res.send(result);
-      })
+      });
+      app.delete('/doctors/:id', verifyJWT,verifyAdmin, async(req, res)=> {
+        const id = req.params.id;
+        const filter = {_id: ObjectId(id)};
+        const result = await doctorsCollection.deleteOne(filter);
+        res.send(result);
+      });
+      //temp update treatment price options 
+      // app.put('/addprice', async(req, res)=> {
+      //   const filter = {};
+      //   const options = {upsert: true};
+      //  const updatedDoc = {
+      //    $set: {
+      //      price: 99,
+      //    },
+      //  };
+      //   const result = await appointmentOptionsCollection.updateMany(filter,updatedDoc, options);
+      //   res.send(result);
+      // })
     }
     finally{
 
