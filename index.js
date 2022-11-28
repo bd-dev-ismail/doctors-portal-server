@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors');
+const nodemailer = require("nodemailer");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require('jsonwebtoken');
 
@@ -21,6 +22,9 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+function sendBookingEmail(booking){
+
+}
 function verifyJWT(req, res, next){
       const authHeader = req.headers.authorization;
       if(!authHeader){
@@ -143,7 +147,7 @@ async function run(){
         res.send(result);
       })
       //get booking by user email
-      app.get("/bookings",verifyJWT, verifyAdmin, async (req, res) => {
+      app.get("/bookings",verifyJWT,  async (req, res) => {
         const email = req.query.email;
         const decodedEmail = req.decoded.email;
         if(email !== decodedEmail){
@@ -174,6 +178,8 @@ async function run(){
           return res.send({ acknowlaged: false, message });
         }
         const result = await bookingsCollection.insertOne(booking);
+        //send email about confrim booking
+        sendBookingEmail(booking);
         res.send(result);
       });
      
